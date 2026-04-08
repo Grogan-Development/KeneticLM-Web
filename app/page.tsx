@@ -1,12 +1,32 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, type FormEvent, type KeyboardEvent } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Folder, MessageSquare, Terminal, Play, Loader2, Send, ChevronRight, File, Wrench } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Folder,
+  Terminal,
+  Play,
+  Loader2,
+  Send,
+  ChevronRight,
+  File,
+  Wrench,
+  Plus,
+  Mic,
+  ChevronDown,
+  Cloud,
+} from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { cn } from "@/lib/utils";
 
@@ -35,16 +55,17 @@ interface Message {
 export default function EditorPage() {
   const [sandboxId, setSandboxId] = useState<string>();
   const [activeFile, setActiveFile] = useState<{ path: string; content: string } | null>(null);
-  const [files, setFiles] = useState<FileNode[]>([]);
-  const [previewUrl, setPreviewUrl] = useState<string>();
+  const [files] = useState<FileNode[]>([]);
+  const [previewUrl] = useState<string>();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
+  const [model, setModel] = useState("minimax-m2.7");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: FormEvent) => {
+    e?.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
@@ -78,7 +99,7 @@ export default function EditorPage() {
       }
 
       const data = await response.text();
-      
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -93,50 +114,46 @@ export default function EditorPage() {
     }
   };
 
-  const handleFileSelect = async (file: FileNode) => {
-    if (file.isDir) {
-      return;
+  const onComposerKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      void handleSubmit();
     }
+  };
+
+  const handleFileSelect = (file: FileNode) => {
+    if (file.isDir) return;
     setActiveFile({ path: file.path, content: "" });
   };
 
   const renderMessage = (message: Message) => {
     const isUser = message.role === "user";
-    
+
     return (
-      <div
-        key={message.id}
-        className={cn(
-          "mb-4 flex",
-          isUser ? "justify-end" : "justify-start"
-        )}
-      >
+      <div key={message.id} className={cn("mb-4 flex", isUser ? "justify-end" : "justify-start")}>
         <div
           className={cn(
-            "max-w-[85%] rounded-lg px-4 py-2",
+            "max-w-[min(92%,32rem)] rounded-lg px-3.5 py-2.5 text-[0.8125rem] leading-relaxed",
             isUser
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted border"
+              ? "bg-secondary text-secondary-foreground"
+              : "bg-card/80 text-card-foreground ring-1 ring-border/80"
           )}
         >
-          <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-          
+          <div className="whitespace-pre-wrap">{message.content}</div>
+
           {message.toolInvocations && message.toolInvocations.length > 0 && (
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 space-y-1.5 border-t border-border/50 pt-2">
               {message.toolInvocations.map((tool) => (
-                <div
-                  key={tool.toolCallId}
-                  className="text-xs bg-background/50 rounded p-2"
-                >
-                  <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                    <Wrench className="w-3 h-3" />
-                    <span className="font-medium">{tool.toolName}</span>
-                    <span className="text-[10px] uppercase">
-                      {tool.state === "call" ? "running..." : "done"}
+                <div key={tool.toolCallId} className="rounded-md bg-muted/50 px-2 py-1.5 font-mono text-[0.65rem]">
+                  <div className="mb-0.5 flex items-center gap-1.5 text-muted-foreground">
+                    <Wrench className="h-3 w-3 shrink-0" aria-hidden />
+                    <span className="text-foreground/90">{tool.toolName}</span>
+                    <span className="text-[0.6rem] uppercase tracking-wide">
+                      {tool.state === "call" ? "…" : "ok"}
                     </span>
                   </div>
                   {tool.state === "result" && tool.result && (
-                    <pre className="text-[10px] overflow-x-auto">
+                    <pre className="max-h-36 overflow-auto text-[0.62rem] text-muted-foreground">
                       {JSON.stringify(tool.result, null, 2)}
                     </pre>
                   )}
@@ -149,124 +166,234 @@ export default function EditorPage() {
     );
   };
 
-  const renderFileTree = (nodes: FileNode[], level = 0) => {
-    return nodes.map((node) => (
+  const renderFileTree = (nodes: FileNode[], level = 0) =>
+    nodes.map((node) => (
       <div key={node.path} style={{ marginLeft: level * 12 }}>
         <button
+          type="button"
           onClick={() => handleFileSelect(node)}
           className={cn(
-            "flex items-center gap-1 w-full text-left px-2 py-1 rounded text-sm hover:bg-accent",
-            activeFile?.path === node.path && "bg-accent"
+            "flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[0.8125rem] hover:bg-accent/60",
+            activeFile?.path === node.path && "bg-accent/80"
           )}
         >
           {node.isDir ? (
             <>
-              <ChevronRight className="w-3 h-3" />
-              <Folder className="w-4 h-4 text-blue-500" />
+              <ChevronRight className="h-3 w-3 shrink-0 opacity-50" />
+              <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             </>
           ) : (
             <>
-              <span className="w-3" />
-              <File className="w-4 h-4 text-gray-500" />
+              <span className="w-3 shrink-0" />
+              <File className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             </>
           )}
           <span className="truncate">{node.name}</span>
         </button>
-        {node.children && node.children.length > 0 && (
-          <div>{renderFileTree(node.children, level + 1)}</div>
-        )}
+        {node.children && node.children.length > 0 && <div>{renderFileTree(node.children, level + 1)}</div>}
       </div>
     ));
-  };
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Header */}
-      <header className="border-b px-4 py-2 flex items-center justify-between bg-card">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-lg">AI Code Editor</span>
-          {sandboxId && (
-            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-mono">
-              {sandboxId.slice(0, 12)}...
-            </span>
-          )}
+    <div className="flex h-screen min-h-0 flex-col bg-background">
+      <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-sm font-medium text-foreground">New thread</span>
+          <button
+            type="button"
+            className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
+            aria-label="Workspace"
+          >
+            Kenetic LM
+            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+          </button>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" disabled={!sandboxId}>
-            <Play className="w-4 h-4 mr-1" />
+          {sandboxId && (
+            <span className="hidden max-w-[12rem] truncate font-mono text-[0.65rem] text-muted-foreground md:inline">
+              {sandboxId.slice(0, 10)}…
+            </span>
+          )}
+          <Button variant="secondary" size="sm" className="h-7 text-xs" disabled={!sandboxId}>
+            <Play className="mr-1 h-3 w-3" />
             Run
           </Button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <ResizablePanelGroup orientation="horizontal" className="flex-1">
-        {/* File Explorer */}
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-          <div className="h-full flex flex-col border-r bg-card">
-            <div className="p-3 border-b">
-              <h2 className="font-semibold text-sm flex items-center gap-2">
-                <Folder className="w-4 h-4" />
-                Explorer
-              </h2>
+      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+        {/* Left: sessions + files */}
+        <ResizablePanel defaultSize={18} minSize={14} maxSize={28} className="min-w-0">
+          <div className="flex h-full min-h-0 flex-col border-r border-border bg-sidebar">
+            <div className="border-b border-sidebar-border px-3 py-2">
+              <p className="text-[0.65rem] text-muted-foreground">Sessions</p>
+              <button
+                type="button"
+                className="mt-1 w-full rounded-md bg-accent/50 px-2 py-1.5 text-left text-[0.8125rem] text-foreground"
+              >
+                This thread
+              </button>
             </div>
-            <ScrollArea className="flex-1 p-2">
-              {files.length > 0 ? (
-                renderFileTree(files)
-              ) : (
-                <div className="text-sm text-muted-foreground p-2">
-                  No files yet. Ask the AI to create some!
-                </div>
-              )}
-            </ScrollArea>
+            <div className="border-b border-sidebar-border px-3 py-2">
+              <p className="mb-1.5 text-[0.65rem] text-muted-foreground">Files</p>
+              <ScrollArea className="h-[min(40vh,12rem)]">
+                {files.length > 0 ? (
+                  renderFileTree(files)
+                ) : (
+                  <p className="text-[0.75rem] leading-snug text-muted-foreground">No files listed yet.</p>
+                )}
+              </ScrollArea>
+            </div>
           </div>
         </ResizablePanel>
 
-        <ResizableHandle />
+        <ResizableHandle className="w-px bg-border" />
 
-        {/* Editor + Terminal */}
-        <ResizablePanel defaultSize={50} minSize={30}>
-          <ResizablePanelGroup orientation="vertical">
-            {/* Editor */}
-            <ResizablePanel defaultSize={70} minSize={30}>
-              <Tabs defaultValue="editor" className="h-full">
-                <TabsList className="w-full justify-start rounded-none border-b bg-muted/50 px-2 h-9">
-                  <TabsTrigger value="editor" className="text-xs">
+        {/* Center: chat + composer */}
+        <ResizablePanel defaultSize={44} minSize={32} className="min-w-0">
+          <div className="flex h-full min-h-0 flex-col bg-background">
+            <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
+              <div className="flex min-h-[calc(100%-1px)] flex-col px-4 py-6">
+                {messages.length === 0 && !isLoading && (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-3 pb-8 text-center">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
+                      <Cloud className="h-5 w-5" strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <h1 className="text-base font-medium text-foreground">Let&apos;s build</h1>
+                      <p className="mt-1 text-sm text-muted-foreground">Kenetic LM · Daytona sandbox</p>
+                    </div>
+                  </div>
+                )}
+                <div className="mx-auto w-full max-w-2xl flex-1">
+                  {messages.map((message) => renderMessage(message))}
+                  {isLoading && (
+                    <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      …
+                    </div>
+                  )}
+                  {error && (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                      {error.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </ScrollArea>
+
+            <div className="shrink-0 border-t border-border bg-card/40 px-3 py-3">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void handleSubmit(e);
+                }}
+                className="mx-auto max-w-2xl space-y-2"
+              >
+                <div className="rounded-xl border border-border bg-muted/30 ring-1 ring-border/50">
+                  <Textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={onComposerKeyDown}
+                    placeholder="Ask anything — @ files and / commands coming soon."
+                    disabled={isLoading}
+                    rows={3}
+                    className="min-h-[5.5rem] resize-none border-0 bg-transparent px-3 py-2.5 text-[0.8125rem] shadow-none focus-visible:ring-0"
+                  />
+                  <div className="flex items-center justify-between gap-2 border-t border-border/80 px-2 py-1.5">
+                    <div className="flex items-center gap-1">
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled aria-label="Add">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                      <Select value={model} onValueChange={setModel}>
+                        <SelectTrigger size="sm" className="h-8 border-border/80 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="minimax-m2.7">MiniMax-M2.7</SelectItem>
+                          <SelectItem value="stub">Other (soon)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled aria-label="Voice">
+                        <Mic className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </div>
+                    <Button
+                      type="submit"
+                      size="icon"
+                      className="h-8 w-8 rounded-full"
+                      disabled={isLoading || !input.trim()}
+                      aria-label="Send"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-center text-[0.65rem] text-muted-foreground">
+                  Enter to send · Shift+Enter newline
+                </p>
+              </form>
+            </div>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle className="w-px bg-border" />
+
+        {/* Right: editor + terminal */}
+        <ResizablePanel defaultSize={38} minSize={28} className="min-w-0">
+          <ResizablePanelGroup orientation="vertical" className="min-h-0">
+            <ResizablePanel defaultSize={68} minSize={36} className="min-h-0">
+              <Tabs defaultValue="editor" className="flex h-full min-h-0 flex-col border-l border-border bg-card/30">
+                <TabsList className="h-9 w-full shrink-0 justify-start gap-0 rounded-none border-b border-border bg-transparent px-2">
+                  <TabsTrigger
+                    value="editor"
+                    className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                  >
                     {activeFile ? activeFile.path.split("/").pop() : "Editor"}
                   </TabsTrigger>
                   {previewUrl && (
-                    <TabsTrigger value="preview" className="text-xs">Preview</TabsTrigger>
+                    <TabsTrigger
+                      value="preview"
+                      className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                    >
+                      Preview
+                    </TabsTrigger>
                   )}
                 </TabsList>
-                
-                <TabsContent value="editor" className="m-0 h-[calc(100%-36px)]">
+
+                <TabsContent value="editor" className="m-0 min-h-0 flex-1 p-0">
                   {activeFile ? (
-                    <Editor
-                      height="100%"
-                      defaultLanguage="typescript"
-                      value={activeFile.content}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        automaticLayout: true,
-                      }}
-                    />
+                    <div className="h-full min-h-0 bg-[oklch(0.11_0.015_265)] p-0.5">
+                      <Editor
+                        height="100%"
+                        defaultLanguage="typescript"
+                        value={activeFile.content}
+                        theme="vs-dark"
+                        options={{
+                          minimap: { enabled: false },
+                          fontSize: 13,
+                          fontFamily: "var(--font-mono), ui-monospace, monospace",
+                          lineHeight: 1.55,
+                          padding: { top: 12 },
+                          scrollBeyondLastLine: false,
+                          automaticLayout: true,
+                          renderLineHighlight: "line",
+                        }}
+                      />
+                    </div>
                   ) : (
-                    <div className="h-full flex items-center justify-center text-muted-foreground">
-                      <div className="text-center">
-                        <p className="mb-2">No file selected</p>
-                        <p className="text-sm">Ask the AI to create or open a file</p>
-                      </div>
+                    <div className="flex h-full min-h-[8rem] flex-col items-center justify-center px-6 text-center">
+                      <p className="text-sm text-muted-foreground">Pick a file from the tree or ask the assistant to create one.</p>
                     </div>
                   )}
                 </TabsContent>
-                
+
                 {previewUrl && (
-                  <TabsContent value="preview" className="m-0 h-[calc(100%-36px)]">
+                  <TabsContent value="preview" className="m-0 min-h-0 flex-1 p-0">
                     <iframe
+                      title="Sandbox preview"
                       src={previewUrl}
-                      className="w-full h-full border-0"
+                      className="h-full min-h-[200px] w-full border-0"
                       sandbox="allow-scripts allow-same-origin"
                     />
                   </TabsContent>
@@ -274,76 +401,34 @@ export default function EditorPage() {
               </Tabs>
             </ResizablePanel>
 
-            <ResizableHandle />
+            <ResizableHandle className="h-px bg-border" />
 
-            {/* Terminal */}
-            <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
-              <div className="h-full flex flex-col border-t bg-card">
-                <div className="px-3 py-2 border-b flex items-center gap-2">
-                  <Terminal className="w-4 h-4" />
-                  <span className="text-sm font-semibold">Terminal</span>
+            <ResizablePanel defaultSize={32} minSize={18} maxSize={52} className="min-h-0">
+              <div className="flex h-full min-h-0 flex-col border-l border-t border-border bg-card">
+                <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
+                  <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-[0.65rem] text-muted-foreground">Shell</span>
                 </div>
-                <div className="flex-1 bg-black p-2 font-mono text-sm text-green-400 overflow-auto">
-                  <div className="text-muted-foreground">
-                    Terminal connected to sandbox PTY will appear here.
-                    <br />
-                    Use the AI chat to execute commands for now.
-                  </div>
+                <div className="min-h-0 flex-1 overflow-auto bg-[oklch(0.09_0.015_265)] p-3 font-mono text-[0.75rem] leading-relaxed text-muted-foreground">
+                  PTY not connected — run commands via the assistant for now.
                 </div>
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>
-
-        <ResizableHandle />
-
-        {/* AI Chat */}
-        <ResizablePanel defaultSize={30} minSize={25} maxSize={40}>
-          <div className="h-full flex flex-col border-l bg-card">
-            <div className="p-3 border-b">
-              <h2 className="font-semibold text-sm flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" />
-                AI Assistant
-              </h2>
-            </div>
-
-            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-              {messages.length === 0 && (
-                <div className="text-sm text-muted-foreground text-center py-8">
-                  Ask me to help you write code, explore files, or run commands!
-                </div>
-              )}
-              {messages.map((message) => renderMessage(message))}
-              {isLoading && (
-                <div className="flex items-center gap-2 text-muted-foreground justify-center py-4">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  AI is thinking...
-                </div>
-              )}
-              {error && (
-                <div className="text-destructive text-sm p-2 bg-destructive/10 rounded">
-                  Error: {error.message}
-                </div>
-              )}
-            </ScrollArea>
-
-            <div className="p-4 border-t">
-              <form onSubmit={handleSubmit} className="flex gap-2">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask the AI to help with code..."
-                  disabled={isLoading}
-                  className="flex-1"
-                />
-                <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </form>
-            </div>
-          </div>
-        </ResizablePanel>
       </ResizablePanelGroup>
+
+      <footer className="flex shrink-0 items-center justify-between border-t border-border px-3 py-1.5 text-[0.65rem] text-muted-foreground">
+        <span>Sandbox</span>
+        <span className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/90" aria-hidden />
+            Ready
+          </span>
+          <span className="hidden sm:inline">·</span>
+          <span className="hidden font-mono sm:inline">{sandboxId ? `${sandboxId.slice(0, 8)}…` : "No sandbox yet"}</span>
+        </span>
+      </footer>
     </div>
   );
 }
