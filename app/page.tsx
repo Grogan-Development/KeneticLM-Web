@@ -178,6 +178,9 @@ export default function EditorPage() {
     );
   };
 
+  /** Right rail (editor / shell / file list) only when there is something to show */
+  const showWorkspacePanel = Boolean(sandboxId || files.length > 0 || activeFile || previewUrl);
+
   const renderFileTree = (nodes: FileNode[], level = 0) =>
     nodes.map((node) => (
       <div key={node.path} style={{ marginLeft: level * 12 }}>
@@ -208,7 +211,11 @@ export default function EditorPage() {
 
   return (
     <div className="flex h-screen min-h-0 flex-col bg-[oklch(0.09_0.01_265)] text-foreground">
-      <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
+      <ResizablePanelGroup
+        key={showWorkspacePanel ? "with-workspace" : "chat-only"}
+        orientation="horizontal"
+        className="min-h-0 flex-1"
+      >
         {/* Cursor-style left rail */}
         <ResizablePanel defaultSize={16} minSize={12} maxSize={24} className="min-w-0">
           <aside className="flex h-full min-h-0 flex-col border-r border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
@@ -263,8 +270,8 @@ export default function EditorPage() {
 
         <ResizableHandle className="w-px bg-white/[0.06]" />
 
-        {/* Center: Cursor landing + chat */}
-        <ResizablePanel defaultSize={48} minSize={36} className="min-w-0">
+        {/* Center: landing + chat */}
+        <ResizablePanel defaultSize={showWorkspacePanel ? 48 : 84} minSize={showWorkspacePanel ? 36 : 52} className="min-w-0">
           <div className="flex h-full min-h-0 flex-col">
             <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
               <div className="flex min-h-full flex-col px-6 pb-4 pt-10">
@@ -389,105 +396,109 @@ export default function EditorPage() {
           </div>
         </ResizablePanel>
 
-        <ResizableHandle className="w-px bg-white/[0.06]" />
+        {showWorkspacePanel && (
+          <>
+            <ResizableHandle className="w-px bg-white/[0.06]" />
 
-        {/* Right: workspace */}
-        <ResizablePanel defaultSize={36} minSize={24} className="min-w-0">
-          <div className="flex h-full min-h-0 flex-col border-l border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
-              <span className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">Workspace</span>
-              <Button variant="secondary" size="sm" className="h-7 text-xs" disabled={!sandboxId}>
-                <Play className="mr-1 h-3 w-3" />
-                Run
-              </Button>
-            </div>
-            <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
-              <ResizablePanel defaultSize={65} minSize={40} className="min-h-0">
-                <Tabs defaultValue="editor" className="flex h-full min-h-0 flex-col">
-                  <TabsList className="h-9 w-full shrink-0 justify-start gap-0 rounded-none border-b border-white/[0.06] bg-transparent px-2">
-                    <TabsTrigger
-                      value="editor"
-                      className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-white/40 data-[state=active]:bg-transparent"
-                    >
-                      {activeFile ? activeFile.path.split("/").pop() : "Editor"}
-                    </TabsTrigger>
-                    {previewUrl && (
-                      <TabsTrigger
-                        value="preview"
-                        className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-white/40 data-[state=active]:bg-transparent"
-                      >
-                        Preview
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
-
-                  <TabsContent value="editor" className="m-0 min-h-0 flex-1 p-0">
-                    {activeFile ? (
-                      <div className="h-full min-h-0 bg-[oklch(0.07_0.012_265)] p-0.5">
-                        <Editor
-                          height="100%"
-                          defaultLanguage="typescript"
-                          value={activeFile.content}
-                          theme="vs-dark"
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 13,
-                            fontFamily: "var(--font-mono), ui-monospace, monospace",
-                            lineHeight: 1.55,
-                            padding: { top: 12 },
-                            scrollBeyondLastLine: false,
-                            automaticLayout: true,
-                            renderLineHighlight: "line",
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex h-full min-h-[6rem] flex-col items-center justify-center px-4 text-center">
-                        <p className="text-[0.8125rem] text-muted-foreground">Files from the sandbox appear in the left rail when listed.</p>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  {previewUrl && (
-                    <TabsContent value="preview" className="m-0 min-h-0 flex-1 p-0">
-                      <iframe
-                        title="Sandbox preview"
-                        src={previewUrl}
-                        className="h-full min-h-[200px] w-full border-0"
-                        sandbox="allow-scripts allow-same-origin"
-                      />
-                    </TabsContent>
-                  )}
-                </Tabs>
-              </ResizablePanel>
-
-              <ResizableHandle className="h-px bg-white/[0.06]" />
-
-              <ResizablePanel defaultSize={35} minSize={18} className="min-h-0">
-                <div className="flex h-full min-h-0 flex-col border-t border-white/[0.06]">
-                  <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-1.5">
-                    <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-[0.65rem] text-muted-foreground">Shell</span>
-                  </div>
-                  <div className="min-h-0 flex-1 overflow-auto bg-black/40 p-3 font-mono text-[0.75rem] leading-relaxed text-muted-foreground">
-                    PTY not connected — use the assistant to run commands.
-                  </div>
+            {/* Right: workspace — only after sandbox / files / editor / preview exist */}
+            <ResizablePanel defaultSize={36} minSize={24} className="min-w-0">
+              <div className="flex h-full min-h-0 flex-col border-l border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
+                  <span className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">Workspace</span>
+                  <Button variant="secondary" size="sm" className="h-7 text-xs" disabled={!sandboxId}>
+                    <Play className="mr-1 h-3 w-3" />
+                    Run
+                  </Button>
                 </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+                <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
+                  <ResizablePanel defaultSize={65} minSize={40} className="min-h-0">
+                    <Tabs defaultValue="editor" className="flex h-full min-h-0 flex-col">
+                      <TabsList className="h-9 w-full shrink-0 justify-start gap-0 rounded-none border-b border-white/[0.06] bg-transparent px-2">
+                        <TabsTrigger
+                          value="editor"
+                          className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-white/40 data-[state=active]:bg-transparent"
+                        >
+                          {activeFile ? activeFile.path.split("/").pop() : "Editor"}
+                        </TabsTrigger>
+                        {previewUrl && (
+                          <TabsTrigger
+                            value="preview"
+                            className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-white/40 data-[state=active]:bg-transparent"
+                          >
+                            Preview
+                          </TabsTrigger>
+                        )}
+                      </TabsList>
 
-            <div className="shrink-0 border-t border-white/[0.06] px-3 py-2">
-              <p className="text-[0.65rem] text-muted-foreground">Files</p>
-              <ScrollArea className="h-24">
-                {files.length > 0 ? (
-                  renderFileTree(files)
-                ) : (
-                  <p className="pt-1 text-[0.75rem] text-muted-foreground">None yet</p>
-                )}
-              </ScrollArea>
-            </div>
-          </div>
-        </ResizablePanel>
+                      <TabsContent value="editor" className="m-0 min-h-0 flex-1 p-0">
+                        {activeFile ? (
+                          <div className="h-full min-h-0 bg-[oklch(0.07_0.012_265)] p-0.5">
+                            <Editor
+                              height="100%"
+                              defaultLanguage="typescript"
+                              value={activeFile.content}
+                              theme="vs-dark"
+                              options={{
+                                minimap: { enabled: false },
+                                fontSize: 13,
+                                fontFamily: "var(--font-mono), ui-monospace, monospace",
+                                lineHeight: 1.55,
+                                padding: { top: 12 },
+                                scrollBeyondLastLine: false,
+                                automaticLayout: true,
+                                renderLineHighlight: "line",
+                              }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex h-full min-h-[6rem] flex-col items-center justify-center px-4 text-center">
+                            <p className="text-[0.8125rem] text-muted-foreground">Files from the sandbox appear in the left rail when listed.</p>
+                          </div>
+                        )}
+                      </TabsContent>
+
+                      {previewUrl && (
+                        <TabsContent value="preview" className="m-0 min-h-0 flex-1 p-0">
+                          <iframe
+                            title="Sandbox preview"
+                            src={previewUrl}
+                            className="h-full min-h-[200px] w-full border-0"
+                            sandbox="allow-scripts allow-same-origin"
+                          />
+                        </TabsContent>
+                      )}
+                    </Tabs>
+                  </ResizablePanel>
+
+                  <ResizableHandle className="h-px bg-white/[0.06]" />
+
+                  <ResizablePanel defaultSize={35} minSize={18} className="min-h-0">
+                    <div className="flex h-full min-h-0 flex-col border-t border-white/[0.06]">
+                      <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-1.5">
+                        <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-[0.65rem] text-muted-foreground">Shell</span>
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-auto bg-black/40 p-3 font-mono text-[0.75rem] leading-relaxed text-muted-foreground">
+                        PTY not connected — use the assistant to run commands.
+                      </div>
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
+
+                <div className="shrink-0 border-t border-white/[0.06] px-3 py-2">
+                  <p className="text-[0.65rem] text-muted-foreground">Files</p>
+                  <ScrollArea className="h-24">
+                    {files.length > 0 ? (
+                      renderFileTree(files)
+                    ) : (
+                      <p className="pt-1 text-[0.75rem] text-muted-foreground">None yet</p>
+                    )}
+                  </ScrollArea>
+                </div>
+              </div>
+            </ResizablePanel>
+          </>
+        )}
       </ResizablePanelGroup>
 
       <footer className="flex shrink-0 items-center justify-between border-t border-white/[0.06] bg-[oklch(0.085_0.012_265)] px-4 py-1.5 text-[0.65rem] text-muted-foreground">
