@@ -58,12 +58,6 @@ interface Message {
   toolInvocations?: ToolInvocation[];
 }
 
-const QUICK_ACTIONS = [
-  { label: "List sandbox files", prompt: "List the project root in the sandbox." },
-  { label: "Review README", prompt: "Draft a short README for this workspace." },
-  { label: "Add API route", prompt: "Outline a minimal Next.js API route for health check." },
-];
-
 export default function EditorPage() {
   const [sandboxId, setSandboxId] = useState<string>();
   const [activeFile, setActiveFile] = useState<{ path: string; content: string } | null>(null);
@@ -376,20 +370,6 @@ export default function EditorPage() {
                       </Button>
                     </div>
                   </div>
-                </div>
-
-                {/* Quick actions */}
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  {QUICK_ACTIONS.map((a) => (
-                    <button
-                      key={a.label}
-                      type="button"
-                      onClick={() => setInput(a.prompt)}
-                      className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[0.75rem] text-muted-foreground transition-colors hover:bg-white/[0.07] hover:text-foreground"
-                    >
-                      {a.label}
-                    </button>
-                  ))}
                 </div>
               </form>
             </div>
