@@ -18,14 +18,20 @@ import {
   Terminal,
   Play,
   Loader2,
-  Send,
   ChevronRight,
   File,
   Wrench,
-  Plus,
   Mic,
   ChevronDown,
-  Cloud,
+  Plus,
+  Package,
+  LayoutDashboard,
+  Bug,
+  PanelLeft,
+  ImageIcon,
+  MoreHorizontal,
+  SlidersHorizontal,
+  Send,
 } from "lucide-react";
 import Editor from "@monaco-editor/react";
 import { cn } from "@/lib/utils";
@@ -51,6 +57,14 @@ interface Message {
   content: string;
   toolInvocations?: ToolInvocation[];
 }
+
+const REPO_LABEL = "Grogan-Development/KeneticLM-Web";
+
+const QUICK_ACTIONS = [
+  { label: "List sandbox files", prompt: "List the project root in the sandbox." },
+  { label: "Review README", prompt: "Draft a short README for this workspace." },
+  { label: "Add API route", prompt: "Outline a minimal Next.js API route for health check." },
+];
 
 export default function EditorPage() {
   const [sandboxId, setSandboxId] = useState<string>();
@@ -135,16 +149,16 @@ export default function EditorPage() {
           className={cn(
             "max-w-[min(92%,32rem)] rounded-lg px-3.5 py-2.5 text-[0.8125rem] leading-relaxed",
             isUser
-              ? "bg-secondary text-secondary-foreground"
-              : "bg-card/80 text-card-foreground ring-1 ring-border/80"
+              ? "bg-[oklch(0.22_0.02_265)] text-foreground"
+              : "bg-[oklch(0.16_0.015_265)] text-foreground ring-1 ring-white/[0.06]"
           )}
         >
           <div className="whitespace-pre-wrap">{message.content}</div>
 
           {message.toolInvocations && message.toolInvocations.length > 0 && (
-            <div className="mt-2 space-y-1.5 border-t border-border/50 pt-2">
+            <div className="mt-2 space-y-1.5 border-t border-white/[0.06] pt-2">
               {message.toolInvocations.map((tool) => (
-                <div key={tool.toolCallId} className="rounded-md bg-muted/50 px-2 py-1.5 font-mono text-[0.65rem]">
+                <div key={tool.toolCallId} className="rounded-md bg-black/30 px-2 py-1.5 font-mono text-[0.65rem]">
                   <div className="mb-0.5 flex items-center gap-1.5 text-muted-foreground">
                     <Wrench className="h-3 w-3 shrink-0" aria-hidden />
                     <span className="text-foreground/90">{tool.toolName}</span>
@@ -173,8 +187,8 @@ export default function EditorPage() {
           type="button"
           onClick={() => handleFileSelect(node)}
           className={cn(
-            "flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[0.8125rem] hover:bg-accent/60",
-            activeFile?.path === node.path && "bg-accent/80"
+            "flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-[0.8125rem] hover:bg-white/[0.06]",
+            activeFile?.path === node.path && "bg-white/[0.08]"
           )}
         >
           {node.isDir ? (
@@ -195,86 +209,96 @@ export default function EditorPage() {
     ));
 
   return (
-    <div className="flex h-screen min-h-0 flex-col bg-background">
-      <header className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">New thread</span>
-          <button
-            type="button"
-            className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground"
-            aria-label="Workspace"
-          >
-            Kenetic LM
-            <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-          </button>
-        </div>
-        <div className="flex items-center gap-2">
-          {sandboxId && (
-            <span className="hidden max-w-[12rem] truncate font-mono text-[0.65rem] text-muted-foreground md:inline">
-              {sandboxId.slice(0, 10)}…
-            </span>
-          )}
-          <Button variant="secondary" size="sm" className="h-7 text-xs" disabled={!sandboxId}>
-            <Play className="mr-1 h-3 w-3" />
-            Run
-          </Button>
-        </div>
-      </header>
-
+    <div className="flex h-screen min-h-0 flex-col bg-[oklch(0.09_0.01_265)] text-foreground">
       <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-        {/* Left: sessions + files */}
-        <ResizablePanel defaultSize={18} minSize={14} maxSize={28} className="min-w-0">
-          <div className="flex h-full min-h-0 flex-col border-r border-border bg-sidebar">
-            <div className="border-b border-sidebar-border px-3 py-2">
-              <p className="text-[0.65rem] text-muted-foreground">Sessions</p>
-              <button
-                type="button"
-                className="mt-1 w-full rounded-md bg-accent/50 px-2 py-1.5 text-left text-[0.8125rem] text-foreground"
-              >
-                This thread
-              </button>
+        {/* Cursor-style left rail */}
+        <ResizablePanel defaultSize={16} minSize={12} maxSize={24} className="min-w-0">
+          <aside className="flex h-full min-h-0 flex-col border-r border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
+            <div className="flex items-center gap-1 border-b border-white/[0.06] px-2 py-2">
+              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="Toggle panel">
+                <PanelLeft className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="border-b border-sidebar-border px-3 py-2">
-              <p className="mb-1.5 text-[0.65rem] text-muted-foreground">Files</p>
-              <ScrollArea className="h-[min(40vh,12rem)]">
-                {files.length > 0 ? (
-                  renderFileTree(files)
-                ) : (
-                  <p className="text-[0.75rem] leading-snug text-muted-foreground">No files listed yet.</p>
-                )}
-              </ScrollArea>
+            <nav className="flex flex-col gap-0.5 p-2">
+              {[
+                { icon: Plus, label: "New session" },
+                { icon: Package, label: "Automations", disabled: true },
+                { icon: LayoutDashboard, label: "Dashboard", disabled: true },
+                { icon: Bug, label: "Bugbot", disabled: true },
+              ].map(({ icon: Icon, label, disabled }) => (
+                <button
+                  key={label}
+                  type="button"
+                  disabled={disabled}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-md px-2 py-2 text-left text-[0.8125rem] text-muted-foreground transition-colors",
+                    disabled ? "cursor-not-allowed opacity-40" : "hover:bg-white/[0.06] hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                  {label}
+                </button>
+              ))}
+            </nav>
+            <div className="flex flex-1 flex-col px-3 py-4">
+              <p className="text-center text-[0.75rem] text-muted-foreground/80">No sessions yet</p>
             </div>
-          </div>
+            <div className="mt-auto border-t border-white/[0.06] p-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/90 text-xs font-semibold text-white">
+                  Z
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[0.8125rem] font-medium leading-tight">You</p>
+                  <p className="text-[0.65rem] text-muted-foreground">Kenetic LM</p>
+                </div>
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" aria-label="More">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" aria-label="Filter">
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </aside>
         </ResizablePanel>
 
-        <ResizableHandle className="w-px bg-border" />
+        <ResizableHandle className="w-px bg-white/[0.06]" />
 
-        {/* Center: chat + composer */}
-        <ResizablePanel defaultSize={44} minSize={32} className="min-w-0">
-          <div className="flex h-full min-h-0 flex-col bg-background">
+        {/* Center: Cursor landing + chat */}
+        <ResizablePanel defaultSize={48} minSize={36} className="min-w-0">
+          <div className="flex h-full min-h-0 flex-col">
             <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
-              <div className="flex min-h-[calc(100%-1px)] flex-col px-4 py-6">
-                {messages.length === 0 && !isLoading && (
-                  <div className="flex flex-1 flex-col items-center justify-center gap-3 pb-8 text-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
-                      <Cloud className="h-5 w-5" strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <h1 className="text-base font-medium text-foreground">Let&apos;s build</h1>
-                      <p className="mt-1 text-sm text-muted-foreground">Kenetic LM · Daytona sandbox</p>
-                    </div>
-                  </div>
-                )}
+              <div className="flex min-h-full flex-col px-6 pb-4 pt-10">
+                {/* Repo + branch (Cursor header) */}
+                <div className="mx-auto mb-8 flex w-full max-w-2xl flex-wrap items-center justify-center gap-2">
+                  <span className="max-w-[min(100%,28rem)] truncate font-mono text-[0.8125rem] text-muted-foreground">
+                    {REPO_LABEL}
+                  </span>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[0.75rem] text-foreground"
+                  >
+                    main
+                    <ChevronDown className="h-3 w-3 opacity-70" />
+                  </button>
+                  {sandboxId && (
+                    <span className="font-mono text-[0.65rem] text-muted-foreground">
+                      · {sandboxId.slice(0, 8)}…
+                    </span>
+                  )}
+                </div>
+
                 <div className="mx-auto w-full max-w-2xl flex-1">
                   {messages.map((message) => renderMessage(message))}
                   {isLoading && (
                     <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      …
+                      Thinking…
                     </div>
                   )}
                   {error && (
-                    <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                       {error.message}
                     </div>
                   )}
@@ -282,152 +306,193 @@ export default function EditorPage() {
               </div>
             </ScrollArea>
 
-            <div className="shrink-0 border-t border-border bg-card/40 px-3 py-3">
+            {/* Composer dock — Cursor-style */}
+            <div className="shrink-0 px-4 pb-6 pt-2">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   void handleSubmit(e);
                 }}
-                className="mx-auto max-w-2xl space-y-2"
+                className="mx-auto w-full max-w-2xl"
               >
-                <div className="rounded-xl border border-border bg-muted/30 ring-1 ring-border/50">
+                <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[oklch(0.13_0.015_265)] shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
                   <Textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={onComposerKeyDown}
-                    placeholder="Ask anything — @ files and / commands coming soon."
+                    placeholder="Ask Kenetic to build, fix bugs, explore"
                     disabled={isLoading}
-                    rows={3}
-                    className="min-h-[5.5rem] resize-none border-0 bg-transparent px-3 py-2.5 text-[0.8125rem] shadow-none focus-visible:ring-0"
+                    rows={4}
+                    className="min-h-[7.5rem] resize-none border-0 bg-transparent px-4 py-3.5 text-[0.9375rem] leading-relaxed text-foreground placeholder:text-muted-foreground/70 focus-visible:ring-0"
                   />
-                  <div className="flex items-center justify-between gap-2 border-t border-border/80 px-2 py-1.5">
-                    <div className="flex items-center gap-1">
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled aria-label="Add">
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                  <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] px-2 py-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
                       <Select value={model} onValueChange={setModel}>
-                        <SelectTrigger size="sm" className="h-8 border-border/80 text-xs">
-                          <SelectValue />
+                        <SelectTrigger
+                          size="sm"
+                          className="h-8 max-w-[9.5rem] border-0 bg-transparent text-[0.75rem] text-muted-foreground shadow-none hover:bg-white/[0.04]"
+                        >
+                          <SelectValue placeholder="Model" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="minimax-m2.7">MiniMax-M2.7</SelectItem>
+                          <SelectItem value="minimax-m2.7">MiniMax M2.7</SelectItem>
                           <SelectItem value="stub">Other (soon)</SelectItem>
                         </SelectContent>
                       </Select>
-                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8" disabled aria-label="Voice">
-                        <Mic className="h-4 w-4 opacity-50" />
+                      <span className="inline-flex h-8 items-center rounded-md px-2 text-[0.75rem] text-muted-foreground/60">
+                        MCPs
+                        <ChevronDown className="ml-0.5 h-3 w-3" />
+                      </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button type="button" variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" disabled aria-label="Images">
+                        <ImageIcon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="submit"
+                        size="icon"
+                        className="h-9 w-9 rounded-full text-muted-foreground hover:bg-white/[0.08] hover:text-foreground disabled:opacity-40"
+                        disabled={isLoading || !input.trim()}
+                        aria-label="Send"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 rounded-full bg-white text-black hover:bg-white/90 disabled:opacity-40"
+                        disabled
+                        aria-label="Voice"
+                      >
+                        <Mic className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Button
-                      type="submit"
-                      size="icon"
-                      className="h-8 w-8 rounded-full"
-                      disabled={isLoading || !input.trim()}
-                      aria-label="Send"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
-                <p className="text-center text-[0.65rem] text-muted-foreground">
-                  Enter to send · Shift+Enter newline
-                </p>
+
+                {/* Quick actions */}
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  {QUICK_ACTIONS.map((a) => (
+                    <button
+                      key={a.label}
+                      type="button"
+                      onClick={() => setInput(a.prompt)}
+                      className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-[0.75rem] text-muted-foreground transition-colors hover:bg-white/[0.07] hover:text-foreground"
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
               </form>
             </div>
           </div>
         </ResizablePanel>
 
-        <ResizableHandle className="w-px bg-border" />
+        <ResizableHandle className="w-px bg-white/[0.06]" />
 
-        {/* Right: editor + terminal */}
-        <ResizablePanel defaultSize={38} minSize={28} className="min-w-0">
-          <ResizablePanelGroup orientation="vertical" className="min-h-0">
-            <ResizablePanel defaultSize={68} minSize={36} className="min-h-0">
-              <Tabs defaultValue="editor" className="flex h-full min-h-0 flex-col border-l border-border bg-card/30">
-                <TabsList className="h-9 w-full shrink-0 justify-start gap-0 rounded-none border-b border-border bg-transparent px-2">
-                  <TabsTrigger
-                    value="editor"
-                    className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent"
-                  >
-                    {activeFile ? activeFile.path.split("/").pop() : "Editor"}
-                  </TabsTrigger>
-                  {previewUrl && (
+        {/* Right: workspace */}
+        <ResizablePanel defaultSize={36} minSize={24} className="min-w-0">
+          <div className="flex h-full min-h-0 flex-col border-l border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
+              <span className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">Workspace</span>
+              <Button variant="secondary" size="sm" className="h-7 text-xs" disabled={!sandboxId}>
+                <Play className="mr-1 h-3 w-3" />
+                Run
+              </Button>
+            </div>
+            <ResizablePanelGroup orientation="vertical" className="min-h-0 flex-1">
+              <ResizablePanel defaultSize={65} minSize={40} className="min-h-0">
+                <Tabs defaultValue="editor" className="flex h-full min-h-0 flex-col">
+                  <TabsList className="h-9 w-full shrink-0 justify-start gap-0 rounded-none border-b border-white/[0.06] bg-transparent px-2">
                     <TabsTrigger
-                      value="preview"
-                      className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                      value="editor"
+                      className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-white/40 data-[state=active]:bg-transparent"
                     >
-                      Preview
+                      {activeFile ? activeFile.path.split("/").pop() : "Editor"}
                     </TabsTrigger>
-                  )}
-                </TabsList>
+                    {previewUrl && (
+                      <TabsTrigger
+                        value="preview"
+                        className="rounded-none border-b-2 border-transparent px-3 text-xs data-[state=active]:border-white/40 data-[state=active]:bg-transparent"
+                      >
+                        Preview
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
 
-                <TabsContent value="editor" className="m-0 min-h-0 flex-1 p-0">
-                  {activeFile ? (
-                    <div className="h-full min-h-0 bg-[oklch(0.11_0.015_265)] p-0.5">
-                      <Editor
-                        height="100%"
-                        defaultLanguage="typescript"
-                        value={activeFile.content}
-                        theme="vs-dark"
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 13,
-                          fontFamily: "var(--font-mono), ui-monospace, monospace",
-                          lineHeight: 1.55,
-                          padding: { top: 12 },
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                          renderLineHighlight: "line",
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex h-full min-h-[8rem] flex-col items-center justify-center px-6 text-center">
-                      <p className="text-sm text-muted-foreground">Pick a file from the tree or ask the assistant to create one.</p>
-                    </div>
-                  )}
-                </TabsContent>
-
-                {previewUrl && (
-                  <TabsContent value="preview" className="m-0 min-h-0 flex-1 p-0">
-                    <iframe
-                      title="Sandbox preview"
-                      src={previewUrl}
-                      className="h-full min-h-[200px] w-full border-0"
-                      sandbox="allow-scripts allow-same-origin"
-                    />
+                  <TabsContent value="editor" className="m-0 min-h-0 flex-1 p-0">
+                    {activeFile ? (
+                      <div className="h-full min-h-0 bg-[oklch(0.07_0.012_265)] p-0.5">
+                        <Editor
+                          height="100%"
+                          defaultLanguage="typescript"
+                          value={activeFile.content}
+                          theme="vs-dark"
+                          options={{
+                            minimap: { enabled: false },
+                            fontSize: 13,
+                            fontFamily: "var(--font-mono), ui-monospace, monospace",
+                            lineHeight: 1.55,
+                            padding: { top: 12 },
+                            scrollBeyondLastLine: false,
+                            automaticLayout: true,
+                            renderLineHighlight: "line",
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-full min-h-[6rem] flex-col items-center justify-center px-4 text-center">
+                        <p className="text-[0.8125rem] text-muted-foreground">Files from the sandbox appear in the left rail when listed.</p>
+                      </div>
+                    )}
                   </TabsContent>
+
+                  {previewUrl && (
+                    <TabsContent value="preview" className="m-0 min-h-0 flex-1 p-0">
+                      <iframe
+                        title="Sandbox preview"
+                        src={previewUrl}
+                        className="h-full min-h-[200px] w-full border-0"
+                        sandbox="allow-scripts allow-same-origin"
+                      />
+                    </TabsContent>
+                  )}
+                </Tabs>
+              </ResizablePanel>
+
+              <ResizableHandle className="h-px bg-white/[0.06]" />
+
+              <ResizablePanel defaultSize={35} minSize={18} className="min-h-0">
+                <div className="flex h-full min-h-0 flex-col border-t border-white/[0.06]">
+                  <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-1.5">
+                    <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-[0.65rem] text-muted-foreground">Shell</span>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-auto bg-black/40 p-3 font-mono text-[0.75rem] leading-relaxed text-muted-foreground">
+                    PTY not connected — use the assistant to run commands.
+                  </div>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+
+            <div className="shrink-0 border-t border-white/[0.06] px-3 py-2">
+              <p className="text-[0.65rem] text-muted-foreground">Files</p>
+              <ScrollArea className="h-24">
+                {files.length > 0 ? (
+                  renderFileTree(files)
+                ) : (
+                  <p className="pt-1 text-[0.75rem] text-muted-foreground">None yet</p>
                 )}
-              </Tabs>
-            </ResizablePanel>
-
-            <ResizableHandle className="h-px bg-border" />
-
-            <ResizablePanel defaultSize={32} minSize={18} maxSize={52} className="min-h-0">
-              <div className="flex h-full min-h-0 flex-col border-l border-t border-border bg-card">
-                <div className="flex items-center gap-2 border-b border-border px-3 py-1.5">
-                  <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-[0.65rem] text-muted-foreground">Shell</span>
-                </div>
-                <div className="min-h-0 flex-1 overflow-auto bg-[oklch(0.09_0.015_265)] p-3 font-mono text-[0.75rem] leading-relaxed text-muted-foreground">
-                  PTY not connected — run commands via the assistant for now.
-                </div>
-              </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+              </ScrollArea>
+            </div>
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
 
-      <footer className="flex shrink-0 items-center justify-between border-t border-border px-3 py-1.5 text-[0.65rem] text-muted-foreground">
+      <footer className="flex shrink-0 items-center justify-between border-t border-white/[0.06] bg-[oklch(0.085_0.012_265)] px-4 py-1.5 text-[0.65rem] text-muted-foreground">
         <span>Sandbox</span>
-        <span className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500/90" aria-hidden />
-            Ready
-          </span>
-          <span className="hidden sm:inline">·</span>
-          <span className="hidden font-mono sm:inline">{sandboxId ? `${sandboxId.slice(0, 8)}…` : "No sandbox yet"}</span>
-        </span>
+        <span className="font-mono">{sandboxId ? `${sandboxId.slice(0, 10)}…` : "Idle"}</span>
       </footer>
     </div>
   );
