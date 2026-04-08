@@ -205,21 +205,9 @@ export default function EditorPage() {
 
   return (
     <div className="flex h-screen min-h-0 flex-col bg-[oklch(0.09_0.01_265)] text-foreground">
-      <ResizablePanelGroup
-        key={showWorkspacePanel ? "with-workspace" : "chat-only"}
-        orientation="horizontal"
-        className="min-h-0 flex-1"
-      >
-        {/* Left rail: fixed min width; never collapsible (resize handle was collapsing to ~0) */}
-        <ResizablePanel
-          id="left-rail"
-          defaultSize={showWorkspacePanel ? "16%" : "18%"}
-          minSize="13rem"
-          maxSize="28%"
-          collapsible={false}
-          className="min-w-[13rem]"
-        >
-          <aside className="flex h-full min-h-0 w-full min-w-0 flex-col border-r border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
+      <div className="flex min-h-0 flex-1">
+        {/* Left rail: fixed width outside PanelGroup so it cannot be dragged to ~0 */}
+        <aside className="flex h-full w-[15rem] min-w-[15rem] shrink-0 flex-col border-r border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
             <div className="flex items-center gap-1 border-b border-white/[0.06] px-2 py-2">
               <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="Toggle panel">
                 <PanelLeft className="h-4 w-4" />
@@ -266,17 +254,15 @@ export default function EditorPage() {
                 </Button>
               </div>
             </div>
-          </aside>
-        </ResizablePanel>
+        </aside>
 
-        <ResizableHandle className="w-px bg-white/[0.06]" />
-
-        {/* Center: landing + chat (percentages with left rail must sum to 100) */}
-        <ResizablePanel
-          defaultSize={showWorkspacePanel ? 48 : 82}
-          minSize={showWorkspacePanel ? 32 : 40}
-          className="min-w-0"
+        <ResizablePanelGroup
+          key={showWorkspacePanel ? "with-workspace" : "chat-only"}
+          orientation="horizontal"
+          className="min-h-0 min-w-0 flex-1"
         >
+          {/* Center: landing + chat */}
+          <ResizablePanel defaultSize={showWorkspacePanel ? 67 : 100} minSize={showWorkspacePanel ? 36 : 52} className="min-w-0">
           <div className="flex h-full min-h-0 flex-col">
             <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
               <div className="flex min-h-full flex-col px-6 pb-4 pt-10">
@@ -392,7 +378,7 @@ export default function EditorPage() {
             <ResizableHandle className="w-px bg-white/[0.06]" />
 
             {/* Right: workspace — only after sandbox / files / editor / preview exist */}
-            <ResizablePanel defaultSize={36} minSize={24} className="min-w-0">
+            <ResizablePanel defaultSize={33} minSize={22} className="min-w-0">
               <div className="flex h-full min-h-0 flex-col border-l border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
                 <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.06] px-3 py-2">
                   <span className="text-[0.65rem] font-medium uppercase tracking-[0.12em] text-muted-foreground">Workspace</span>
@@ -491,6 +477,7 @@ export default function EditorPage() {
           </>
         )}
       </ResizablePanelGroup>
+      </div>
 
       <footer className="flex shrink-0 items-center justify-between border-t border-white/[0.06] bg-[oklch(0.085_0.012_265)] px-4 py-1.5 text-[0.65rem] text-muted-foreground">
         <span>Sandbox</span>
