@@ -512,11 +512,6 @@ export default function EditorPage() {
         )}
       </ResizablePanelGroup>
       </div>
-
-      <footer className="flex shrink-0 items-center justify-between border-t border-white/[0.06] bg-[oklch(0.085_0.012_265)] px-4 py-1.5 text-[0.65rem] text-muted-foreground">
-        <span>Sandbox</span>
-        <span className="font-mono">{sandboxId ? `${sandboxId.slice(0, 10)}…` : "Idle"}</span>
-      </footer>
     </div>
   );
 }
