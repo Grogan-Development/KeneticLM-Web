@@ -58,8 +58,6 @@ interface Message {
   toolInvocations?: ToolInvocation[];
 }
 
-const REPO_LABEL = "Grogan-Development/KeneticLM-Web";
-
 const QUICK_ACTIONS = [
   { label: "List sandbox files", prompt: "List the project root in the sandbox." },
   { label: "Review README", prompt: "Draft a short README for this workspace." },
@@ -270,16 +268,18 @@ export default function EditorPage() {
           <div className="flex h-full min-h-0 flex-col">
             <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
               <div className="flex min-h-full flex-col px-6 pb-4 pt-10">
-                {/* Repo + branch (Cursor header) */}
+                {/* Workspace context bar; user repo when Git linking exists */}
                 <div className="mx-auto mb-8 flex w-full max-w-2xl flex-wrap items-center justify-center gap-2">
-                  <span className="max-w-[min(100%,28rem)] truncate font-mono text-[0.8125rem] text-muted-foreground">
-                    {REPO_LABEL}
+                  <span className="max-w-[min(100%,28rem)] truncate text-[0.8125rem] text-muted-foreground">
+                    No repository linked
                   </span>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[0.75rem] text-foreground"
+                    disabled
+                    className="inline-flex cursor-not-allowed items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.04] px-2 py-0.5 text-[0.75rem] text-muted-foreground opacity-70"
+                    title="Sandbox context (Git linking coming later)"
                   >
-                    main
+                    Sandbox
                     <ChevronDown className="h-3 w-3 opacity-70" />
                   </button>
                   {sandboxId && (
