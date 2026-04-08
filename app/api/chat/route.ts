@@ -4,6 +4,27 @@ import { getMinimaxClient, MINIMAX_MODEL } from "@/lib/ai/minimax";
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.MINIMAX_API_KEY?.trim()) {
+      return Response.json(
+        {
+          error: "Server configuration",
+          details:
+            "MINIMAX_API_KEY is not set. Add it in Railway (or .env.local) — see .env.local.example.",
+        },
+        { status: 503 }
+      );
+    }
+    if (!process.env.DAYTONA_API_KEY?.trim()) {
+      return Response.json(
+        {
+          error: "Server configuration",
+          details:
+            "DAYTONA_API_KEY is not set. Add it in Railway (or .env.local) — see .env.local.example.",
+        },
+        { status: 503 }
+      );
+    }
+
     const { messages, sandboxId }: { messages: any[]; sandboxId?: string } = await req.json();
 
     // Get or create sandbox
@@ -41,13 +62,20 @@ When helping users:
 
 Sandbox ID: ${sandbox.id}`;
 
-    // Convert messages to Anthropic format
+    // MiniMax Anthropic-compatible API expects content blocks, not raw strings (see platform docs).
     const anthropicMessages = messages
-      .filter((m) => m.role !== "system")
+      .filter((m) => m.role === "user" || m.role === "assistant")
       .map((m) => ({
         role: m.role as "user" | "assistant",
-        content: m.content,
+        content: [{ type: "text" as const, text: String(m.content ?? "") }],
       }));
+
+    if (anthropicMessages.length === 0) {
+      return Response.json(
+        { error: "Bad request", details: "No user or assistant messages to send." },
+        { status: 400 }
+      );
+    }
 
     const stream = await anthropic.messages.create({
       model: MINIMAX_MODEL,
@@ -63,10 +91,11 @@ Sandbox ID: ${sandbox.id}`;
       async start(controller) {
         try {
           for await (const event of stream) {
-            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-              const chunk = event.delta.text;
-              controller.enqueue(new TextEncoder().encode(chunk));
+            if (event.type !== "content_block_delta" || !event.delta) continue;
+            if (event.delta.type === "text_delta" && "text" in event.delta && event.delta.text) {
+              controller.enqueue(new TextEncoder().encode(event.delta.text));
             }
+            // thinking_delta and other block types are ignored for plain chat UI
           }
           controller.close();
         } catch (error) {

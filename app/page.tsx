@@ -112,7 +112,16 @@ export default function EditorPage() {
       }
 
       if (!response.ok) {
-        throw new Error("Failed to get response");
+        const errBody = await response.text();
+        let message = `Request failed (${response.status})`;
+        try {
+          const j = JSON.parse(errBody) as { error?: string; details?: string };
+          if (j.details?.trim()) message = j.details.trim();
+          else if (j.error?.trim()) message = j.error.trim();
+        } catch {
+          if (errBody.trim()) message = errBody.trim().slice(0, 500);
+        }
+        throw new Error(message);
       }
 
       const data = await response.text();
