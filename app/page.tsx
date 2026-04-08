@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type FormEvent, type KeyboardEvent } from "react";
+import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from "react";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -70,7 +70,16 @@ export default function EditorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [leftRailCollapsed, setLeftRailCollapsed] = useState(false);
+  const [leftRailOpen, setLeftRailOpen] = useState(false);
+
+  useEffect(() => {
+    if (!leftRailOpen) return;
+    const onKey = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.key === "Escape") setLeftRailOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [leftRailOpen]);
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -208,39 +217,39 @@ export default function EditorPage() {
   return (
     <div className="flex h-screen min-h-0 flex-col bg-[oklch(0.09_0.01_265)] text-foreground">
       <div className="flex min-h-0 flex-1">
-        {/* Left rail: fixed width; toggles to a slim strip (no resizable collapse-to-zero) */}
-        <aside
-          className={cn(
-            "flex h-full shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[oklch(0.085_0.012_265)] transition-[width] duration-200 ease-out",
-            leftRailCollapsed ? "w-12 min-w-12" : "w-[15rem] min-w-[15rem]"
-          )}
-        >
-          {leftRailCollapsed ? (
-            <div className="flex flex-col items-center gap-1 border-b border-white/[0.06] py-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-muted-foreground"
-                onClick={() => setLeftRailCollapsed(false)}
-                aria-label="Expand sidebar"
-                title="Expand sidebar"
-              >
-                <PanelRight className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <>
+        {/* Closed: single floating icon (no strip). Open: slide-over + dimmed backdrop */}
+        {!leftRailOpen && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="fixed left-3 top-3 z-[100] h-9 w-9 rounded-lg border border-white/[0.08] bg-[oklch(0.085_0.012_265)]/90 text-muted-foreground shadow-md backdrop-blur-sm hover:bg-white/[0.06] hover:text-foreground"
+            onClick={() => setLeftRailOpen(true)}
+            aria-label="Open sidebar"
+            title="Open sidebar"
+          >
+            <PanelRight className="h-4 w-4" />
+          </Button>
+        )}
+
+        {leftRailOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Close sidebar"
+              className="fixed inset-0 z-[90] animate-in fade-in bg-black/50 duration-200"
+              onClick={() => setLeftRailOpen(false)}
+            />
+            <aside className="fixed inset-y-0 left-0 z-[100] flex w-[15rem] flex-col overflow-hidden border-r border-white/[0.06] bg-[oklch(0.085_0.012_265)] shadow-2xl animate-in slide-in-from-left-4 fade-in duration-200">
               <div className="flex items-center gap-1 border-b border-white/[0.06] px-2 py-2">
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-muted-foreground"
-                  onClick={() => setLeftRailCollapsed(true)}
-                  aria-label="Collapse sidebar"
-                  aria-expanded="true"
-                  title="Collapse sidebar"
+                  onClick={() => setLeftRailOpen(false)}
+                  aria-label="Close sidebar"
+                  title="Close sidebar"
                 >
                   <PanelLeft className="h-4 w-4" />
                 </Button>
@@ -286,9 +295,9 @@ export default function EditorPage() {
                   </Button>
                 </div>
               </div>
-            </>
-          )}
-        </aside>
+            </aside>
+          </>
+        )}
 
         <ResizablePanelGroup
           key={showWorkspacePanel ? "with-workspace" : "chat-only"}
