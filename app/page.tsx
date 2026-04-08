@@ -28,6 +28,7 @@ import {
   LayoutDashboard,
   Bug,
   PanelLeft,
+  PanelRight,
   ImageIcon,
   MoreHorizontal,
   SlidersHorizontal,
@@ -69,6 +70,7 @@ export default function EditorPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [leftRailCollapsed, setLeftRailCollapsed] = useState(false);
 
   const handleSubmit = async (e?: FormEvent) => {
     e?.preventDefault();
@@ -206,54 +208,86 @@ export default function EditorPage() {
   return (
     <div className="flex h-screen min-h-0 flex-col bg-[oklch(0.09_0.01_265)] text-foreground">
       <div className="flex min-h-0 flex-1">
-        {/* Left rail: fixed width outside PanelGroup so it cannot be dragged to ~0 */}
-        <aside className="flex h-full w-[15rem] min-w-[15rem] shrink-0 flex-col border-r border-white/[0.06] bg-[oklch(0.085_0.012_265)]">
-            <div className="flex items-center gap-1 border-b border-white/[0.06] px-2 py-2">
-              <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" aria-label="Toggle panel">
-                <PanelLeft className="h-4 w-4" />
+        {/* Left rail: fixed width; toggles to a slim strip (no resizable collapse-to-zero) */}
+        <aside
+          className={cn(
+            "flex h-full shrink-0 flex-col overflow-hidden border-r border-white/[0.06] bg-[oklch(0.085_0.012_265)] transition-[width] duration-200 ease-out",
+            leftRailCollapsed ? "w-12 min-w-12" : "w-[15rem] min-w-[15rem]"
+          )}
+        >
+          {leftRailCollapsed ? (
+            <div className="flex flex-col items-center gap-1 border-b border-white/[0.06] py-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground"
+                onClick={() => setLeftRailCollapsed(false)}
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
+              >
+                <PanelRight className="h-4 w-4" />
               </Button>
             </div>
-            <nav className="flex flex-col gap-0.5 p-2">
-              {[
-                { icon: Plus, label: "New session" },
-                { icon: Package, label: "Automations", disabled: true },
-                { icon: LayoutDashboard, label: "Dashboard", disabled: true },
-                { icon: Bug, label: "Bugbot", disabled: true },
-              ].map(({ icon: Icon, label, disabled }) => (
-                <button
-                  key={label}
+          ) : (
+            <>
+              <div className="flex items-center gap-1 border-b border-white/[0.06] px-2 py-2">
+                <Button
                   type="button"
-                  disabled={disabled}
-                  className={cn(
-                    "flex items-center gap-2.5 rounded-md px-2 py-2 text-left text-[0.8125rem] text-muted-foreground transition-colors",
-                    disabled ? "cursor-not-allowed opacity-40" : "hover:bg-white/[0.06] hover:text-foreground"
-                  )}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                  onClick={() => setLeftRailCollapsed(true)}
+                  aria-label="Collapse sidebar"
+                  aria-expanded="true"
+                  title="Collapse sidebar"
                 >
-                  <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-                  {label}
-                </button>
-              ))}
-            </nav>
-            <div className="flex flex-1 flex-col px-3 py-4">
-              <p className="text-center text-[0.75rem] text-muted-foreground/80">No sessions yet</p>
-            </div>
-            <div className="mt-auto border-t border-white/[0.06] p-3">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/90 text-xs font-semibold text-white">
-                  Z
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[0.8125rem] font-medium leading-tight">You</p>
-                  <p className="text-[0.65rem] text-muted-foreground">Kenetic LM</p>
-                </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" aria-label="More">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" aria-label="Filter">
-                  <SlidersHorizontal className="h-4 w-4" />
+                  <PanelLeft className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
+              <nav className="flex flex-col gap-0.5 p-2">
+                {[
+                  { icon: Plus, label: "New session" },
+                  { icon: Package, label: "Automations", disabled: true },
+                  { icon: LayoutDashboard, label: "Dashboard", disabled: true },
+                  { icon: Bug, label: "Bugbot", disabled: true },
+                ].map(({ icon: Icon, label, disabled }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    disabled={disabled}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-md px-2 py-2 text-left text-[0.8125rem] text-muted-foreground transition-colors",
+                      disabled ? "cursor-not-allowed opacity-40" : "hover:bg-white/[0.06] hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                    {label}
+                  </button>
+                ))}
+              </nav>
+              <div className="flex flex-1 flex-col px-3 py-4">
+                <p className="text-center text-[0.75rem] text-muted-foreground/80">No sessions yet</p>
+              </div>
+              <div className="mt-auto border-t border-white/[0.06] p-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500/90 text-xs font-semibold text-white">
+                    Z
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[0.8125rem] font-medium leading-tight">You</p>
+                    <p className="text-[0.65rem] text-muted-foreground">Kenetic LM</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" aria-label="More">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground" aria-label="Filter">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </aside>
 
         <ResizablePanelGroup
